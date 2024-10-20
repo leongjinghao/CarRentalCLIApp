@@ -8,7 +8,7 @@ import static com.carrentalproj.Utility.*;
 
 public class App {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
 
         MemberService memberService = new MemberServiceImpl(new MemberRepositoryImpl());
         VehicleService vehicleService = new VehicleServiceImpl(new VehicleRepositoryImpl());
@@ -19,7 +19,14 @@ public class App {
 
         prepopulateData(memberService, vehicleService, inventoryService);
 
-        ClientContext carRentalClientContext = new ClientContext(memberService, vehicleService, inventoryService, rentalReservationOrchestrator);
-        carRentalClientContext.request();
+        Thread clientThread = new Thread(new Runnable() {
+            public void run() {
+                ClientContext carRentalClientContext = new ClientContext(memberService, vehicleService, inventoryService, rentalReservationOrchestrator);
+                carRentalClientContext.request();
+            }
+        });
+
+        clientThread.start();
+        clientThread.join();
     }
 }
