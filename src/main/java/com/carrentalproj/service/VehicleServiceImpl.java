@@ -4,6 +4,7 @@ import com.carrentalproj.entity.vehicleType.Vehicle;
 import com.carrentalproj.repository.VehicleRepository;
 import com.carrentalproj.repository.VehicleRepositoryImpl;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,8 +37,11 @@ public class VehicleServiceImpl implements VehicleService {
 
     @Override
     public int addVehicleType(Vehicle vehicle) {
-        vehicleRepository.save(vehicle);
-        return vehicle.getId();
+        try {
+            return vehicleRepository.save(vehicle);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override

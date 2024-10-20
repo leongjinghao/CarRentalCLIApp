@@ -35,13 +35,27 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     @Override
-    public int addToInventory(Inventory inventoryInstance) {
-        inventoryRepository.save(inventoryInstance);
-        return inventoryInstance.getId();
+    public int addToInventory(Inventory inventory) {
+        try {
+            return inventoryRepository.save(inventory);
+        } catch (java.sql.SQLException sqlException) {
+            throw new RuntimeException(sqlException);
+        }
     }
 
     @Override
     public Inventory getFromInventory(int id) {
         return inventoryRepository.findById(id);
+    }
+
+    @Override
+    public void updateInventoryStatus(int id, String status) {
+        try {
+            Inventory inventory = inventoryRepository.findById(id);
+            inventory.setStatus(status);
+            inventoryRepository.save(inventory);
+        } catch (java.sql.SQLException sqlException) {
+            throw new RuntimeException(sqlException);
+        }
     }
 }

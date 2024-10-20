@@ -1,24 +1,26 @@
 package com.carrentalproj.repository;
 
+import com.carrentalproj.databaseconnection.DatabaseConnection;
 import com.carrentalproj.entity.Reservation;
 
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class ReservationRepositoryImpl implements ReservationRepository {
 
-    private final List<Reservation> reservations;
-    private int reservationId;
+    Connection connection;
 
     private static final Lock lock = new ReentrantLock();
 
     private static ReservationRepository instance;
 
     private ReservationRepositoryImpl() {
-        reservations = new ArrayList<>();
-        reservationId = 1;
+        DatabaseConnection databaseConnection = DatabaseConnection.getInstance();
+        connection = databaseConnection.getConnection();
     }
 
     public static ReservationRepository getInstance() {
@@ -35,32 +37,118 @@ public class ReservationRepositoryImpl implements ReservationRepository {
 
     @Override
     public Reservation findById(int id) {
-        return reservations.stream()
-                .filter(reservation -> reservation.getId() == id).findFirst().get();
+        Reservation reservation = null;
+
+        try {
+            PreparedStatement preparedStatement = connection.prepareStatement(
+                    "SELECT * FROM reservation WHERE id = ?");
+            preparedStatement.setInt(1, id);
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            if (resultSet.next()) {
+                reservation = new Reservation(
+                        resultSet.getInt(1),
+                        InventoryRepositoryImpl.getInstance().findById(
+                                resultSet.getInt(2)),
+                        MemberRepositoryImpl.getInstance().findById(
+                                resultSet.getInt(3)),
+                        resultSet.getDate(5),
+                        resultSet.getDate(6)
+                );
+            } else {
+                throw new NoSuchElementException("No reservation record with ID=" + id + " found");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return reservation;
     }
 
     @Override
     public List<Reservation> findAll() {
+        List<Reservation> reservations = new ArrayList<>();
+
+        try {
+            Statement statement = connection.createStatement();
+            ResultSet resultSet = statement.executeQuery("SELECT * FROM reservation");
+
+            while (resultSet.next()) {
+                Reservation reservation = new Reservation(
+                        resultSet.getInt(1),
+                        InventoryRepositoryImpl.getInstance().findById(
+                                resultSet.getInt(2)),
+                        MemberRepositoryImpl.getInstance().findById(
+                                resultSet.getInt(3)),
+                        resultSet.getDate(4),
+                        resultSet.getDate(5)
+                );
+
+                reservations.add(reservation);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
         return reservations;
     }
 
     @Override
-    public void save(Reservation reservation) {
+    public int save(Reservation reservation) throws SQLException {
         lock.lock();
 
-        reservation.setId(reservationId++);
-        reservations.add(reservation);
+        int id = reservation.getId();
+        PreparedStatement preparedStatement;
+
+        // Update
+        try {
+            findById(reservation.getId());
+
+            preparedStatement = connection.prepareStatement("""
+                    UPDATE reservation
+                    SET inventoryId = ?, memberId = ?, startDate = ?, endDate = ?
+                    WHERE id = %d
+                    """.formatted(reservation.getId()));
+        }
+        // Create
+        catch (NoSuchElementException e) {
+            preparedStatement = connection.prepareStatement("""
+                    INSERT INTO reservation(inventoryId, memberId, startDate, endDate)
+                    VALUES
+                    (?, ?, ?, ?)
+                    """);
+        }
+
+        if (preparedStatement != null) {
+            preparedStatement.setInt(1, reservation.getInventoryInstance().getId());
+            preparedStatement.setInt(2, reservation.getMember().getId());
+            preparedStatement.setDate(3, new Date(reservation.getStartDate().getTime()));
+            preparedStatement.setDate(4, new Date(reservation.getEndDate().getTime()));
+            preparedStatement.executeUpdate();
+
+            Statement statement = connection.createStatement();
+            ResultSet resultSet = statement.executeQuery("SELECT LAST_INSERT_ID()");
+            resultSet.next();
+            id = resultSet.getInt(1);
+        }
 
         lock.unlock();
+
+        return id;
     }
 
     @Override
     public void delete(int id) {
         lock.lock();
 
-        reservations.stream()
-                .filter(reservation -> reservation.getId() == id).findFirst()
-                .ifPresent(reservation -> reservations.remove(reservation));
+        try {
+            PreparedStatement preparedStatement = connection.prepareStatement(
+                    "DELETE FROM reservation WHERE id = ?");
+            preparedStatement.setInt(1, id);
+            preparedStatement.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
 
         lock.unlock();
     }

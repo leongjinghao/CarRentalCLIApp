@@ -4,6 +4,7 @@ import com.carrentalproj.entity.Member;
 import com.carrentalproj.repository.MemberRepository;
 import com.carrentalproj.repository.MemberRepositoryImpl;
 
+import java.sql.SQLException;
 import java.util.List;
 
 public class MemberServiceImpl implements MemberService {
@@ -35,8 +36,20 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     public int addMember(Member member) {
-        memberRepository.save(member);
-        return member.getId();
+        try {
+            return memberRepository.save(member);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void updateMember(Member member) {
+        try {
+            memberRepository.save(member);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override

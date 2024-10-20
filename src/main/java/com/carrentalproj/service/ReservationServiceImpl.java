@@ -7,6 +7,7 @@ import com.carrentalproj.entity.Reservation;
 import com.carrentalproj.repository.ReservationRepository;
 import com.carrentalproj.repository.ReservationRepositoryImpl;
 
+import java.sql.SQLException;
 import java.util.Date;
 import java.util.List;
 
@@ -70,8 +71,11 @@ public class ReservationServiceImpl implements ReservationService {
                 endDate
         );
 
-        reservationRepository.save(reservation);
-        return reservation.getId();
+        try {
+            return reservationRepository.save(reservation);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override

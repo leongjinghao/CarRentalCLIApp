@@ -13,11 +13,13 @@ public class RentalReservationOrchestrator implements RentalService, Reservation
 
     private final RentalService rentalService;
     private final ReservationService reservationService;
+    private final InventoryService inventoryService;
     private static RentalReservationOrchestrator instance;
 
     private RentalReservationOrchestrator() {
         rentalService = RentalServiceImp.getInstance();
         reservationService = ReservationServiceImpl.getInstance();
+        inventoryService = InventoryServiceImpl.getInstance();
     }
 
     public static synchronized RentalReservationOrchestrator getInstance() {
@@ -70,9 +72,14 @@ public class RentalReservationOrchestrator implements RentalService, Reservation
         }
 
         // Set inventory instance as rented, rented status preceded all other statuses
-        inventoryInstance.setStatus("rented");
+        inventoryService.updateInventoryStatus(inventoryInstance.getId(), "rented");
 
         return rentalService.rent(inventoryInstance, member, dueDate);
+    }
+
+    @Override
+    public void updateRentalReturnedStatus(int id, boolean isReturned) {
+
     }
 
     @Override
@@ -83,10 +90,11 @@ public class RentalReservationOrchestrator implements RentalService, Reservation
         // if there are pending reservation made on the inventory instance, retain the "reserved" status on returned
         // else marked it as "available"
         if (!closestReservationRecords.isEmpty()) {
-            inventoryInstance.setStatus("reserved");
+            inventoryService.updateInventoryStatus(inventoryInstance.getId(), "reserved");
         } else {
-            inventoryInstance.setStatus("available");
+            inventoryService.updateInventoryStatus(inventoryInstance.getId(), "available");
         }
+
 
         rentalService.returned(id);
     }
@@ -148,7 +156,7 @@ public class RentalReservationOrchestrator implements RentalService, Reservation
          *  - If current status is "available", update to "reserved"
          */
         if (inventoryInstance.getStatus().equals("available")) {
-            inventoryInstance.setStatus("reserved");
+            inventoryService.updateInventoryStatus(inventoryInstance.getId(), "reserved");
         }
 
         return reservationService.reserve(inventoryInstance, member, startDate, endDate);

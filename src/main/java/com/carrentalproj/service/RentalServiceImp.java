@@ -7,7 +7,9 @@ import com.carrentalproj.entity.Rental;
 import com.carrentalproj.repository.RentalRepository;
 import com.carrentalproj.repository.RentalRepositoryImpl;
 
+import java.sql.SQLException;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -69,13 +71,32 @@ public class RentalServiceImp implements RentalService {
                 period * inventoryInstance.getRateOfRental()
         );
 
-        rentalRepository.save(rental);
-        return rental.getId();
+        try {
+            return rentalRepository.save(rental);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void updateRentalReturnedStatus(int id, boolean isReturned) {
+        try {
+            Rental rental = rentalRepository.findById(id);
+            rental.setReturned(isReturned);
+            rentalRepository.save(rental);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     public void returned(int id) {
-        Rental rentalToRelease = rentalRepository.findById(id);
-        rentalToRelease.setReturned(true);
+        try {
+            Rental rental = rentalRepository.findById(id);
+            rental.setReturned(true);
+            rentalRepository.save(rental);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

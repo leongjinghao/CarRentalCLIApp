@@ -1,6 +1,6 @@
 package com.carrentalproj.entity.vehicleType;
 
-public abstract class Vehicle {
+public class Vehicle {
 
     private int id;
     private String brand;
@@ -49,7 +49,9 @@ public abstract class Vehicle {
         this.colour = colour;
     }
 
-    abstract void drive();
+    public void drive() {
+        System.out.println("To be implemented by subclass");
+    }
 
     @Override
     public String toString() {

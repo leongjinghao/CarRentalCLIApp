@@ -10,7 +10,7 @@ public class Inventory {
     private double rateOfRental;
     private String status;
 
-    // private int vehicleTypeId;
+    // private int vehicleId;
     private Vehicle vehicle;
 
     public Inventory() {

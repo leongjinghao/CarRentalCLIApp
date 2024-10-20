@@ -9,5 +9,6 @@ public interface MemberService {
     List<Member> getAllMembers();
     Member getMember(int id);
     int addMember(Member member);
+    void updateMember(Member member);
     void removeMember(int id);
 }
