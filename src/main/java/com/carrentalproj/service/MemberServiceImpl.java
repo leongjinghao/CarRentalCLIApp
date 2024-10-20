@@ -2,15 +2,25 @@ package com.carrentalproj.service;
 
 import com.carrentalproj.entity.Member;
 import com.carrentalproj.repository.MemberRepository;
+import com.carrentalproj.repository.MemberRepositoryImpl;
 
 import java.util.List;
 
 public class MemberServiceImpl implements MemberService {
 
     private final MemberRepository memberRepository;
+    private static MemberServiceImpl instance;
 
-    public MemberServiceImpl(MemberRepository memberRepository) {
-        this.memberRepository = memberRepository;
+    private MemberServiceImpl() {
+        memberRepository = MemberRepositoryImpl.getInstance();
+    }
+
+    public static synchronized MemberServiceImpl getInstance() {
+        if (instance == null) {
+            instance = new MemberServiceImpl();
+        }
+
+        return instance;
     }
 
     @Override

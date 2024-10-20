@@ -7,7 +7,6 @@ import com.carrentalproj.entity.Member;
 import com.carrentalproj.entity.vehicleType.Vehicle;
 import com.carrentalproj.service.*;
 
-
 public class ClientContext {
 
     private ClientState clientState;
@@ -22,12 +21,11 @@ public class ClientContext {
     InventoryService inventoryService;
     RentalReservationOrchestrator rentalReservationOrchestrator;
 
-
-    public ClientContext(MemberService memberService, VehicleService vehicleService, InventoryService inventoryService, RentalReservationOrchestrator rentalReservationOrchestrator) {
-        this.memberService = memberService;
-        this.vehicleService = vehicleService;
-        this.inventoryService = inventoryService;
-        this.rentalReservationOrchestrator = rentalReservationOrchestrator;
+    public ClientContext() {
+        this.memberService = MemberServiceImpl.getInstance();
+        this.vehicleService = VehicleServiceImpl.getInstance();
+        this.inventoryService = InventoryServiceImpl.getInstance();
+        this.rentalReservationOrchestrator = RentalReservationOrchestrator.getInstance();
 
         clientState = new StartState(this);
     }

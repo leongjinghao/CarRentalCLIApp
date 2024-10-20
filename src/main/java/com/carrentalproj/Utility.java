@@ -5,9 +5,7 @@ import com.carrentalproj.entity.Member;
 import com.carrentalproj.entity.vehicleType.Car;
 import com.carrentalproj.entity.vehicleType.Van;
 import com.carrentalproj.entity.vehicleType.Vehicle;
-import com.carrentalproj.service.InventoryService;
-import com.carrentalproj.service.MemberService;
-import com.carrentalproj.service.VehicleService;
+import com.carrentalproj.service.*;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -51,15 +49,17 @@ public class Utility {
         };
     }
 
-    public static void prepopulateData(MemberService memberService, VehicleService vehicleService, InventoryService inventoryService) {
+    public static void prepopulateData() {
         Map<String, Integer> ids = new HashMap<>();
 
-        prepopulateSampleMemberInstances(memberService, ids);
-        prepopulateSampleVehicleModels(vehicleService, ids);
-        prepopulateSampleInventoryInstances(vehicleService, inventoryService, ids);
+        prepopulateSampleMemberInstances(ids);
+        prepopulateSampleVehicleModels(ids);
+        prepopulateSampleInventoryInstances(ids);
     }
 
-    public static void prepopulateSampleMemberInstances(MemberService memberService, Map<String, Integer> ids) {
+    public static void prepopulateSampleMemberInstances(Map<String, Integer> ids) {
+        MemberService memberService = MemberServiceImpl.getInstance();
+
         Member john = new Member(0, "John" , "Hunk");
         Member anna = new Member(0, "Anna", "Mary");
         int johnMemberId = memberService.addMember(john);
@@ -69,7 +69,9 @@ public class Utility {
         ids.put("annaMemberId", annaMemberId);
     }
 
-    public static void prepopulateSampleVehicleModels(VehicleService vehicleService, Map<String, Integer> ids) {
+    public static void prepopulateSampleVehicleModels(Map<String, Integer> ids) {
+        VehicleService vehicleService = VehicleServiceImpl.getInstance();
+
         Vehicle teslaModel3 = new Car(0, "Tesla", "Model 3", "Black");
         Vehicle toyotaHiace = new Van(0, "Toyota","Hiace", "white");
         int teslaModel3VehicleId = vehicleService.addVehicleType(teslaModel3);
@@ -79,7 +81,10 @@ public class Utility {
         ids.put("toyotaHiaceVehicleId", toyotaHiaceVehicleId);
     }
 
-    public static void prepopulateSampleInventoryInstances(VehicleService vehicleService, InventoryService inventoryService, Map<String, Integer> ids) {
+    public static void prepopulateSampleInventoryInstances(Map<String, Integer> ids) {
+        VehicleService vehicleService = VehicleServiceImpl.getInstance();
+        InventoryService inventoryService = InventoryServiceImpl.getInstance();
+
         Vehicle teslaModel3 = vehicleService.getVehicleType(ids.get("teslaModel3VehicleId"));
         Vehicle toyotaHiace = vehicleService.getVehicleType(ids.get("toyotaHiaceVehicleId"));
 

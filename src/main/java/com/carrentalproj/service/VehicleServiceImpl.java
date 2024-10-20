@@ -2,6 +2,7 @@ package com.carrentalproj.service;
 
 import com.carrentalproj.entity.vehicleType.Vehicle;
 import com.carrentalproj.repository.VehicleRepository;
+import com.carrentalproj.repository.VehicleRepositoryImpl;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,9 +10,18 @@ import java.util.List;
 public class VehicleServiceImpl implements VehicleService {
 
     private final VehicleRepository vehicleRepository;
+    private static VehicleServiceImpl instance;
 
-    public VehicleServiceImpl(VehicleRepository vehicleRepository) {
-        this.vehicleRepository = vehicleRepository;
+    private VehicleServiceImpl() {
+        vehicleRepository = VehicleRepositoryImpl.getInstance();
+    }
+
+    public static synchronized VehicleServiceImpl getInstance() {
+        if (instance == null) {
+            instance = new VehicleServiceImpl();
+        }
+
+        return instance;
     }
 
     @Override

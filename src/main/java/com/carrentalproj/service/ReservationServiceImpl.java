@@ -5,6 +5,7 @@ import com.carrentalproj.entity.Inventory;
 import com.carrentalproj.entity.Member;
 import com.carrentalproj.entity.Reservation;
 import com.carrentalproj.repository.ReservationRepository;
+import com.carrentalproj.repository.ReservationRepositoryImpl;
 
 import java.util.Date;
 import java.util.List;
@@ -12,9 +13,18 @@ import java.util.List;
 public class ReservationServiceImpl implements ReservationService {
 
     private final ReservationRepository reservationRepository;
+    private static ReservationServiceImpl instance;
 
-    public ReservationServiceImpl(ReservationRepository reservationRepository) {
-        this.reservationRepository = reservationRepository;
+    private ReservationServiceImpl() {
+        reservationRepository = ReservationRepositoryImpl.getInstance();
+    }
+
+    public static synchronized ReservationServiceImpl getInstance() {
+        if (instance == null) {
+            instance = new ReservationServiceImpl();
+        }
+
+        return instance;
     }
 
     @Override

@@ -5,6 +5,7 @@ import com.carrentalproj.entity.Inventory;
 import com.carrentalproj.entity.Member;
 import com.carrentalproj.entity.Rental;
 import com.carrentalproj.repository.RentalRepository;
+import com.carrentalproj.repository.RentalRepositoryImpl;
 
 import java.time.Duration;
 import java.util.*;
@@ -13,9 +14,18 @@ import java.util.concurrent.TimeUnit;
 public class RentalServiceImp implements RentalService {
 
     private final RentalRepository rentalRepository;
+    private static RentalServiceImp instance;
 
-    public RentalServiceImp(RentalRepository rentalRepository) {
-        this.rentalRepository = rentalRepository;
+    private RentalServiceImp() {
+        rentalRepository = RentalRepositoryImpl.getInstance();
+    }
+
+    public static synchronized RentalServiceImp getInstance() {
+        if (instance == null) {
+            instance = new RentalServiceImp();
+        }
+
+        return instance;
     }
 
     @Override

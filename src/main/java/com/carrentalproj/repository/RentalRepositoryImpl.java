@@ -12,13 +12,24 @@ public class RentalRepositoryImpl implements RentalRepository {
     private final List<Rental> rentals;
     private int rentalId;
 
-    private final Lock lock;
+    private static final Lock lock = new ReentrantLock();
 
-    public RentalRepositoryImpl() {
+    private static RentalRepository instance;
+
+    private RentalRepositoryImpl() {
         rentals = new ArrayList<>();
         rentalId = 1;
+    }
 
-        lock = new ReentrantLock();
+    public static RentalRepository getInstance() {
+        lock.lock();
+
+        if (instance == null) {
+            instance = new RentalRepositoryImpl();
+        }
+
+        lock.unlock();
+        return instance;
     }
 
     @Override

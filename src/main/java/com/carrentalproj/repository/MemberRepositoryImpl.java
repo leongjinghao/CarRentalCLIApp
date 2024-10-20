@@ -12,13 +12,25 @@ public class MemberRepositoryImpl implements MemberRepository {
     private final List<Member> members;
     private int memberId;
 
-    private final Lock lock;
+    private static final Lock lock = new ReentrantLock();
 
-    public MemberRepositoryImpl() {
+    private static MemberRepository instance;
+
+    private MemberRepositoryImpl() {
         members = new ArrayList<>();
         memberId = 1;
+    }
 
-        lock = new ReentrantLock();
+    public static MemberRepository getInstance() {
+        lock.lock();
+
+        if (instance == null) {
+            instance = new MemberRepositoryImpl();
+        }
+
+        lock.unlock();
+
+        return instance;
     }
 
     @Override

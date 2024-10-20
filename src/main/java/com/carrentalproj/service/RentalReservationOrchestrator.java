@@ -13,10 +13,19 @@ public class RentalReservationOrchestrator implements RentalService, Reservation
 
     private final RentalService rentalService;
     private final ReservationService reservationService;
+    private static RentalReservationOrchestrator instance;
 
-    public RentalReservationOrchestrator(RentalService rentalService, ReservationService reservationService) {
-        this.rentalService = rentalService;
-        this.reservationService = reservationService;
+    private RentalReservationOrchestrator() {
+        rentalService = RentalServiceImp.getInstance();
+        reservationService = ReservationServiceImpl.getInstance();
+    }
+
+    public static synchronized RentalReservationOrchestrator getInstance() {
+        if (instance == null) {
+            instance = new RentalReservationOrchestrator();
+        }
+
+        return instance;
     }
 
     @Override

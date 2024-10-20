@@ -12,13 +12,25 @@ public class VehicleRepositoryImpl implements VehicleRepository {
     private final List<Vehicle> vehicles;
     private int vehicleId;
 
-    private final Lock lock;
+    private static final Lock lock = new ReentrantLock();
 
-    public VehicleRepositoryImpl() {
+    private static VehicleRepository instance;
+
+    private VehicleRepositoryImpl() {
         vehicles = new ArrayList<>();
         vehicleId = 1;
+    }
 
-        lock = new ReentrantLock();
+    public static VehicleRepository getInstance() {
+        lock.lock();
+
+        if (instance == null) {
+            instance = new VehicleRepositoryImpl();
+        }
+
+        lock.unlock();
+
+        return instance;
     }
 
     @Override

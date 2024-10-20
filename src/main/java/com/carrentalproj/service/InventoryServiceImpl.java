@@ -2,15 +2,25 @@ package com.carrentalproj.service;
 
 import com.carrentalproj.entity.Inventory;
 import com.carrentalproj.repository.InventoryRepository;
+import com.carrentalproj.repository.InventoryRepositoryImpl;
 
 import java.util.List;
 
 public class InventoryServiceImpl implements InventoryService {
 
     private final InventoryRepository inventoryRepository;
+    private static InventoryServiceImpl instance;
 
-    public InventoryServiceImpl(InventoryRepository inventoryRepository) {
-        this.inventoryRepository = inventoryRepository;
+    private InventoryServiceImpl() {
+        inventoryRepository = InventoryRepositoryImpl.getInstance();
+    }
+
+    public static synchronized InventoryServiceImpl getInstance() {
+        if (instance == null) {
+            instance = new InventoryServiceImpl();
+        }
+
+        return instance;
     }
 
     @Override

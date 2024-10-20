@@ -12,13 +12,25 @@ public class InventoryRepositoryImpl implements InventoryRepository {
     private final List<Inventory> inventoryStore;
     private int inventoryId;
 
-    private final Lock lock;
+    private static final Lock lock = new ReentrantLock();
 
-    public InventoryRepositoryImpl() {
+    private static InventoryRepository instance;
+
+    private InventoryRepositoryImpl() {
         inventoryStore = new ArrayList<>();
         inventoryId = 1;
+    }
 
-        lock = new ReentrantLock();
+    public static InventoryRepository getInstance() {
+        lock.lock();
+
+        if (instance == null) {
+            instance = new InventoryRepositoryImpl();
+        }
+
+        lock.unlock();
+
+        return instance;
     }
 
     @Override

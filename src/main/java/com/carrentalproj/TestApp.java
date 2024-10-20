@@ -1,7 +1,6 @@
 package com.carrentalproj;
 
 import com.carrentalproj.entity.*;
-import com.carrentalproj.repository.*;
 import com.carrentalproj.service.*;
 
 import java.util.Calendar;
@@ -17,27 +16,11 @@ public class TestApp {
 
     public static void main(String[] args) {
 
-        MemberService memberService = new MemberServiceImpl(new MemberRepositoryImpl());
-        VehicleService vehicleService = new VehicleServiceImpl(new VehicleRepositoryImpl());
-        InventoryService inventoryService = new InventoryServiceImpl(new InventoryRepositoryImpl());
-        RentalService rentalService = new RentalServiceImp(new RentalRepositoryImpl());
-        ReservationService reservationService = new ReservationServiceImpl(new ReservationRepositoryImpl());
-        RentalReservationOrchestrator rentalReservationOrchestrator = new RentalReservationOrchestrator(rentalService, reservationService);
+        MemberService memberService = MemberServiceImpl.getInstance();
+        InventoryService inventoryService = InventoryServiceImpl.getInstance();
+        RentalReservationOrchestrator rentalReservationOrchestrator = RentalReservationOrchestrator.getInstance();
 
-        /*
-         * Initialise sample member instances
-         */
-        prepopulateSampleMemberInstances(memberService, ids);
-
-        /*
-         * Initialise sample vehicle models that are available in the rental service
-         */
-        prepopulateSampleVehicleModels(vehicleService, ids);
-
-        /*
-         * Initialise sample inventory instance, of vehicle models available in the rental service
-         */
-        prepopulateSampleInventoryInstances(vehicleService, inventoryService, ids);
+        prepopulateData();
 
         /*
          * Sample rental & reservation requests

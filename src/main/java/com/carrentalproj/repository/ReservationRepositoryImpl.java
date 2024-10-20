@@ -12,13 +12,25 @@ public class ReservationRepositoryImpl implements ReservationRepository {
     private final List<Reservation> reservations;
     private int reservationId;
 
-    private final Lock lock;
+    private static final Lock lock = new ReentrantLock();
 
-    public ReservationRepositoryImpl() {
+    private static ReservationRepository instance;
+
+    private ReservationRepositoryImpl() {
         reservations = new ArrayList<>();
         reservationId = 1;
+    }
 
-        lock = new ReentrantLock();
+    public static ReservationRepository getInstance() {
+        lock.lock();
+
+        if (instance == null) {
+            instance = new ReservationRepositoryImpl();
+        }
+
+        lock.unlock();
+
+        return instance;
     }
 
     @Override
