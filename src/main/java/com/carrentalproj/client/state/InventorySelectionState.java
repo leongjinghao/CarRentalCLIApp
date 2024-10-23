@@ -34,15 +34,22 @@ public class InventorySelectionState implements ClientState {
                 "(" + inventoryInstance.getStatus() + ")"));
 
         int optionSelected = sc.nextInt();
-        clientContext.setInventoryInstanceSelected(inventoryInstances.get(optionSelected - 1));
 
-        switch (clientContext.getBusinessOperation()) {
-            case "rental" -> clientContext.setClientState(new RentalState(clientContext));
-            case "reservation" -> clientContext.setClientState(new ReservationState(clientContext));
-            case "ViewMembersByInventoryInstance" ->
-                    clientContext.setClientState(new ViewMembersByInventoryInstance(clientContext));
-            default ->
-                    throw new IllegalClientStateException("Illegal client state: Unexpected current business operation (" + clientContext.getBusinessOperation() + ")");
+        try {
+            Inventory inventoryInstanceSelected = inventoryInstances.get(optionSelected - 1);
+            clientContext.setInventoryInstanceSelected(inventoryInstanceSelected);
+
+            switch (clientContext.getBusinessOperation()) {
+                case "rental" -> clientContext.setClientState(new RentalState(clientContext));
+                case "reservation" -> clientContext.setClientState(new ReservationState(clientContext));
+                case "ViewMembersByInventoryInstance" ->
+                        clientContext.setClientState(new ViewMembersByInventoryInstance(clientContext));
+                default ->
+                        throw new IllegalClientStateException("Illegal client state: Unexpected current business operation (" + clientContext.getBusinessOperation() + ")");
+            }
+        } catch (IndexOutOfBoundsException e) {
+            System.out.println("Invalid selection: Please select an option within the list shown");
+            clientContext.setClientState(new InventorySelectionState(clientContext));
         }
     }
 }

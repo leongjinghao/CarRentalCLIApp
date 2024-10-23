@@ -28,7 +28,13 @@ public class VehicleSelectionState implements ClientState {
         vehicleTypes.forEach(vehicle -> System.out.println(option.getAndIncrement() + ". " + vehicle.getBrand() + ": " + vehicle.getModel() + " (" + vehicle.getColour() + ")"));
         int optionSelected = sc.nextInt();
 
-        clientContext.setVehicleTypeSelected(vehicleTypes.get(optionSelected - 1));
-        clientContext.setClientState(new InventorySelectionState(clientContext));
+        try {
+            Vehicle vehicleTypeSelected = vehicleTypes.get(optionSelected - 1);
+            clientContext.setVehicleTypeSelected(vehicleTypeSelected);
+            clientContext.setClientState(new InventorySelectionState(clientContext));
+        } catch (IndexOutOfBoundsException e) {
+            System.out.println("Invalid selection: Please select an option within the list shown");
+            clientContext.setClientState(new VehicleSelectionState(clientContext));
+        }
     }
 }
