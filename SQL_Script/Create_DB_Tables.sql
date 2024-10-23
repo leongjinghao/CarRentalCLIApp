@@ -1,10 +1,14 @@
--- CREATE DATABASE carRentalDB;
+DROP DATABASE IF EXISTS carRentalDB;
+CREATE DATABASE carRentalDB;
 
-DROP TABLE IF EXISTS reservation;
-DROP TABLE IF EXISTS rental;
-DROP TABLE IF EXISTS inventory;
-DROP TABLE IF EXISTS vehicle;
-DROP TABLE IF EXISTS member;
+USE carRentalDB;
+
+-- DROP TABLE IF EXISTS reservation;
+-- DROP TABLE IF EXISTS rental;
+-- DROP TABLE IF EXISTS inventory;
+-- DROP TABLE IF EXISTS vehicle;
+-- DROP TABLE IF EXISTS notification;
+-- DROP TABLE IF EXISTS member;
 
 CREATE TABLE vehicle(
 	id INT AUTO_INCREMENT PRIMARY KEY,
@@ -52,5 +56,13 @@ CREATE TABLE reservation(
     endDate DATE,
     
     FOREIGN KEY (inventoryId) REFERENCES inventory(id),
+    FOREIGN KEY (memberId) REFERENCES member(id)
+);
+
+CREATE TABLE notification(
+	id INT AUTO_INCREMENT PRIMARY KEY,
+    memberId INT NOT NULL,
+    message VARCHAR(200),
+    
     FOREIGN KEY (memberId) REFERENCES member(id)
 );
