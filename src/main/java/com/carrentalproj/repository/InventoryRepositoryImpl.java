@@ -12,25 +12,26 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class InventoryRepositoryImpl implements InventoryRepository {
 
-    Connection connection;
+    DatabaseConnection databaseConnection;
 
     private static final Lock lock = new ReentrantLock();
 
     private static InventoryRepository instance;
 
     private InventoryRepositoryImpl() {
-        DatabaseConnection databaseConnection = DatabaseConnection.getInstance();
-        connection = databaseConnection.getConnection();
+        databaseConnection = DatabaseConnection.getInstance();
     }
 
     public static InventoryRepository getInstance() {
-        lock.lock();
+        try {
+            lock.lock();
 
-        if (instance == null) {
-            instance = new InventoryRepositoryImpl();
+            if (instance == null) {
+                instance = new InventoryRepositoryImpl();
+            }
+        } finally {
+            lock.unlock();
         }
-
-        lock.unlock();
 
         return instance;
     }
@@ -39,7 +40,7 @@ public class InventoryRepositoryImpl implements InventoryRepository {
     public Inventory findById(int id) {
         Inventory inventoryInstance = null;
 
-        try {
+        try (Connection connection = databaseConnection.getConnection()) {
             PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM inventory WHERE id = ?");
             preparedStatement.setInt(1, id);
             ResultSet resultSet = preparedStatement.executeQuery();
@@ -60,7 +61,7 @@ public class InventoryRepositoryImpl implements InventoryRepository {
     public List<Inventory> findAll() {
         List<Inventory> inventoryList = new ArrayList<>();
 
-        try {
+        try (Connection connection = databaseConnection.getConnection()) {
             Statement statement = connection.createStatement();
             ResultSet resultSet = statement.executeQuery("SELECT * FROM inventory");
 
@@ -78,61 +79,71 @@ public class InventoryRepositoryImpl implements InventoryRepository {
 
     @Override
     public int save(Inventory inventory) throws SQLException {
-        lock.lock();
+        int idOnCreate = 0;
 
-        int id = inventory.getId();
-        PreparedStatement preparedStatement;
-
-        // Update
         try {
-            findById(inventory.getId());
+            lock.lock();
 
-            preparedStatement = connection.prepareStatement("""
-                    UPDATE inventory
-                    SET vehicleId = ?, barcode = ?, parkingStallNum = ?, rateOfRental = ?, status = ?
-                    WHERE id = %d
-                    """.formatted(inventory.getId()));
+            try (Connection connection = databaseConnection.getConnection()) {
+
+                PreparedStatement preparedStatement;
+
+                // Update
+                try {
+                    findById(inventory.getId());
+
+                    preparedStatement = connection.prepareStatement("""
+                            UPDATE inventory
+                            SET vehicleId = ?, barcode = ?, parkingStallNum = ?, rateOfRental = ?, status = ?
+                            WHERE id = %d
+                            """.formatted(inventory.getId()));
+                }
+                // Create
+                catch (NoSuchElementException e) {
+                    preparedStatement = connection.prepareStatement("""
+                            INSERT INTO inventory(vehicleId, barcode, parkingStallNum, rateOfRental, status)
+                            VALUES
+                            (?, ?, ?, ?, ?)
+                            """);
+                }
+
+                if (preparedStatement != null) {
+                    preparedStatement.setInt(1, inventory.getVehicle().getId());
+                    preparedStatement.setString(2, inventory.getBarcode());
+                    preparedStatement.setString(3, inventory.getParkingStallNum());
+                    preparedStatement.setDouble(4, inventory.getRateOfRental());
+                    preparedStatement.setString(5, inventory.getStatus());
+                    preparedStatement.executeUpdate();
+
+                    Statement statement = connection.createStatement();
+                    ResultSet resultSet = statement.executeQuery("SELECT LAST_INSERT_ID()");
+                    resultSet.next();
+                    idOnCreate = resultSet.getInt(1);
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        } finally {
+            lock.unlock();
         }
-        // Create
-        catch (NoSuchElementException e) {
-            preparedStatement = connection.prepareStatement("""
-                    INSERT INTO inventory(vehicleId, barcode, parkingStallNum, rateOfRental, status)
-                    VALUES
-                    (?, ?, ?, ?, ?)
-                    """);
-        }
 
-        if (preparedStatement != null) {
-            preparedStatement.setInt(1, inventory.getVehicle().getId());
-            preparedStatement.setString(2, inventory.getBarcode());
-            preparedStatement.setString(3, inventory.getParkingStallNum());
-            preparedStatement.setDouble(4, inventory.getRateOfRental());
-            preparedStatement.setString(5, inventory.getStatus());
-            preparedStatement.executeUpdate();
-
-            Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery("SELECT LAST_INSERT_ID()");
-            resultSet.next();
-            id = resultSet.getInt(1);
-        }
-
-        lock.unlock();
-
-        return id;
+        return idOnCreate;
     }
 
     @Override
     public void delete(int id) {
-        lock.lock();
-
         try {
-            PreparedStatement preparedStatement = connection.prepareStatement("DELETE FROM inventory WHERE id = ?");
-            preparedStatement.setInt(1, id);
-            preparedStatement.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+            lock.lock();
 
-        lock.unlock();
+            try (Connection connection = databaseConnection.getConnection()) {
+                PreparedStatement preparedStatement = connection.prepareStatement("DELETE FROM inventory WHERE id = ?");
+                preparedStatement.setInt(1, id);
+                preparedStatement.executeUpdate();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        } finally {
+            lock.unlock();
+        }
     }
 }

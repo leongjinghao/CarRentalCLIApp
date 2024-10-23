@@ -4,12 +4,14 @@ import com.carrentalproj.Utility;
 import com.carrentalproj.entity.Inventory;
 import com.carrentalproj.entity.Member;
 import com.carrentalproj.entity.Reservation;
+import com.carrentalproj.exception.IllegalCarRentalOperationArgumentException;
 import com.carrentalproj.repository.ReservationRepository;
 import com.carrentalproj.repository.ReservationRepositoryImpl;
 
 import java.sql.SQLException;
 import java.util.Date;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 public class ReservationServiceImpl implements ReservationService {
 
@@ -47,8 +49,7 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     public Reservation getReservationById(int id) {
-        return reservationRepository.findAll().stream()
-                .filter(reservation -> reservation.getId() == id).findFirst().get();
+        return reservationRepository.findById(id);
     }
 
     @Override
@@ -57,10 +58,10 @@ public class ReservationServiceImpl implements ReservationService {
         // Validation on startDate and endDate
         Date today = Utility.getTodayDate();
         if (startDate.before(today)) {
-            throw new IllegalArgumentException("Start date cannot be before today's date");
+            throw new IllegalCarRentalOperationArgumentException("Start date cannot be before today's date");
         }
         if (startDate.after(endDate)) {
-            throw new IllegalArgumentException("Start date cannot be after end date");
+            throw new IllegalCarRentalOperationArgumentException("Start date cannot be after end date");
         }
 
         Reservation reservation = new Reservation(
@@ -79,7 +80,18 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
-    public void cancelReservation(int id) {
-        reservationRepository.delete(id);
+    public void cancelReservation(int memberId, int reservationId) {
+        try {
+            Reservation reservation = reservationRepository.findById(reservationId);
+
+            if (reservation.getMember().getId() == memberId) {
+                reservationRepository.delete(reservationId);
+            } else {
+                throw new IllegalCarRentalOperationArgumentException("Reservation cancellation failed, member is not the owner of the reservation");
+            }
+
+        } catch (NoSuchElementException e) {
+            throw new IllegalCarRentalOperationArgumentException(e.getMessage());
+        }
     }
 }

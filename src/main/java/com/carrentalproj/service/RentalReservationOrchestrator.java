@@ -5,6 +5,7 @@ import com.carrentalproj.entity.Inventory;
 import com.carrentalproj.entity.Member;
 import com.carrentalproj.entity.Rental;
 import com.carrentalproj.entity.Reservation;
+import com.carrentalproj.exception.IllegalCarRentalOperationArgumentException;
 
 import java.util.Date;
 import java.util.List;
@@ -57,16 +58,16 @@ public class RentalReservationOrchestrator implements RentalService, Reservation
         String status = inventoryInstance.getStatus();
         if (status.equals("rented")) {
             Rental closestRentalRecord = findClosestRentalRecord(inventoryInstance.getId());
-            throw new IllegalArgumentException("Vehicle not available: vehicle is rented out until " + closestRentalRecord.getDueDate());
+            throw new IllegalCarRentalOperationArgumentException("Vehicle not available: vehicle is rented out until " + closestRentalRecord.getDueDate());
         } else if (status.equals("reserved")) {
-            List<Reservation> closestReservationRecords = findClosestReservationsRecord(inventoryInstance.getId());
+            List<Reservation> closestReservationRecords = findPresentReservationsRecord(inventoryInstance.getId());
 
             for (Reservation reservation : closestReservationRecords) {
                 Date existingStartDate = reservation.getStartDate();
                 Date existingEndDate = reservation.getEndDate();
 
                 if (today.before(existingEndDate) && existingStartDate.before(dueDate)) {
-                    throw new IllegalArgumentException("Vehicle not available: vehicle is reserved from " + existingStartDate + " to " + existingEndDate);
+                    throw new IllegalCarRentalOperationArgumentException("Vehicle not available: vehicle is reserved from " + existingStartDate + " to " + existingEndDate);
                 }
             }
         }
@@ -78,14 +79,9 @@ public class RentalReservationOrchestrator implements RentalService, Reservation
     }
 
     @Override
-    public void updateRentalReturnedStatus(int id, boolean isReturned) {
-
-    }
-
-    @Override
-    public void returned(int id) {
-        Inventory inventoryInstance = getRentalsById(id).getInventoryInstance();
-        List<Reservation> closestReservationRecords = findClosestReservationsRecord(inventoryInstance.getId());
+    public void returned(int memberId, int rentalId) {
+        Inventory inventoryInstance = getRentalsById(rentalId).getInventoryInstance();
+        List<Reservation> closestReservationRecords = findPresentReservationsRecord(inventoryInstance.getId());
 
         // if there are pending reservation made on the inventory instance, retain the "reserved" status on returned
         // else marked it as "available"
@@ -96,7 +92,12 @@ public class RentalReservationOrchestrator implements RentalService, Reservation
         }
 
 
-        rentalService.returned(id);
+        rentalService.returned(memberId, rentalId);
+    }
+
+    @Override
+    public void chargeLatePendingReturn() {
+        rentalService.chargeLatePendingReturn();
     }
 
     @Override
@@ -133,18 +134,18 @@ public class RentalReservationOrchestrator implements RentalService, Reservation
             Date dueDate = closestRentalRecord.getDueDate();
 
             if (startDate.compareTo(dueDate) <= 0) {
-                throw new IllegalArgumentException("Vehicle not available: vehicle is rented until " + dueDate);
+                throw new IllegalCarRentalOperationArgumentException("Vehicle not available: vehicle is rented until " + dueDate);
             }
         }
         if (!status.equals("available")) {
-            List<Reservation> closestReservationRecords = findClosestReservationsRecord(inventoryInstance.getId());
+            List<Reservation> closestReservationRecords = findPresentReservationsRecord(inventoryInstance.getId());
 
             for (Reservation reservation : closestReservationRecords) {
                 Date existingStartDate = reservation.getStartDate();
                 Date existingEndDate = reservation.getEndDate();
 
                 if (startDate.before(existingEndDate) && existingStartDate.before(endDate)) {
-                    throw new IllegalArgumentException("Vehicle not available: vehicle is reserved during the period " + existingStartDate + " to " + existingEndDate);
+                    throw new IllegalCarRentalOperationArgumentException("Vehicle not available: vehicle is reserved during the period " + existingStartDate + " to " + existingEndDate);
                 }
             }
         }
@@ -163,11 +164,11 @@ public class RentalReservationOrchestrator implements RentalService, Reservation
     }
 
     @Override
-    public void cancelReservation(int id) {
-        reservationService.cancelReservation(id);
+    public void cancelReservation(int memberId, int reservationId) {
+        reservationService.cancelReservation(memberId, reservationId);
     }
 
-    public List<Reservation> findClosestReservationsRecord(int inventoryInstanceId) {
+    public List<Reservation> findPresentReservationsRecord(int inventoryInstanceId) {
         Date today = Utility.getTodayDate();
 
         List<Reservation> existingReservations = reservationService.getReservationsByInventoryInstanceId(inventoryInstanceId);

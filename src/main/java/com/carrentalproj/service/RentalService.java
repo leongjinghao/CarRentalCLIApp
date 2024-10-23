@@ -15,6 +15,6 @@ public interface RentalService {
     List<Rental> getRentalsByMemberId(int memberId);
     Rental getRentalsById(int id);
     int rent(Inventory inventoryInstance, Member member, Date dueDate);
-    void updateRentalReturnedStatus(int id, boolean isReturned);
-    void returned(int id);
+    void returned(int memberId, int rentalId);
+    void chargeLatePendingReturn();
 }

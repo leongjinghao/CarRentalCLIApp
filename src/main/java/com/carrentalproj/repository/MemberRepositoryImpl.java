@@ -12,25 +12,26 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class MemberRepositoryImpl implements MemberRepository {
 
-    Connection connection;
+    private final DatabaseConnection databaseConnection;
 
     private static final Lock lock = new ReentrantLock();
 
     private static MemberRepository instance;
 
     private MemberRepositoryImpl() {
-        DatabaseConnection databaseConnection = DatabaseConnection.getInstance();
-        connection = databaseConnection.getConnection();
+        databaseConnection = DatabaseConnection.getInstance();
     }
 
     public static MemberRepository getInstance() {
-        lock.lock();
+        try {
+            lock.lock();
 
-        if (instance == null) {
-            instance = new MemberRepositoryImpl();
+            if (instance == null) {
+                instance = new MemberRepositoryImpl();
+            }
+        } finally {
+            lock.unlock();
         }
-
-        lock.unlock();
 
         return instance;
     }
@@ -39,7 +40,7 @@ public class MemberRepositoryImpl implements MemberRepository {
     public Member findById(int id) {
         Member member = null;
 
-        try {
+        try (Connection connection = databaseConnection.getConnection()) {
             PreparedStatement preparedStatement = connection.prepareStatement(
                     "SELECT * FROM member WHERE id = ?");
             preparedStatement.setInt(1, id);
@@ -65,7 +66,7 @@ public class MemberRepositoryImpl implements MemberRepository {
     public List<Member> findAll() {
         List<Member> members = new ArrayList<>();
 
-        try {
+        try (Connection connection = databaseConnection.getConnection()) {
             Statement statement = connection.createStatement();
             ResultSet resultSet = statement.executeQuery("SELECT * FROM member");
 
@@ -87,59 +88,68 @@ public class MemberRepositoryImpl implements MemberRepository {
 
     @Override
     public int save(Member member) throws SQLException {
-        lock.lock();
+        int idOnCreate = 0;
 
-        int id = member.getId();
-        PreparedStatement preparedStatement;
-
-        // Update
         try {
-            findById(member.getId());
+            lock.lock();
 
-            preparedStatement = connection.prepareStatement("""
-                    UPDATE member
-                    SET firstName = ?, lastName = ?
-                    WHERE id = %d
-                    """.formatted(member.getId()));
+            try (Connection connection = databaseConnection.getConnection()) {
+                PreparedStatement preparedStatement;
+
+                // Update
+                try {
+                    findById(member.getId());
+
+                    preparedStatement = connection.prepareStatement("""
+                            UPDATE member
+                            SET firstName = ?, lastName = ?
+                            WHERE id = %d
+                            """.formatted(member.getId()));
+                }
+                // Create
+                catch (NoSuchElementException e) {
+                    preparedStatement = connection.prepareStatement("""
+                            INSERT INTO member(firstName, lastName)
+                            VALUES
+                            (?, ?)
+                            """);
+                }
+
+                if (preparedStatement != null) {
+                    preparedStatement.setString(1, member.getFirstName());
+                    preparedStatement.setString(2, member.getLastName());
+                    preparedStatement.executeUpdate();
+
+                    Statement statement = connection.createStatement();
+                    ResultSet resultSet = statement.executeQuery("SELECT LAST_INSERT_ID()");
+                    resultSet.next();
+                    idOnCreate = resultSet.getInt(1);
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        } finally {
+            lock.unlock();
         }
-        // Create
-        catch (NoSuchElementException e) {
-            preparedStatement = connection.prepareStatement("""
-                    INSERT INTO member(firstName, lastName)
-                    VALUES
-                    (?, ?)
-                    """);
-        }
 
-        if (preparedStatement != null) {
-            preparedStatement.setString(1, member.getFirstName());
-            preparedStatement.setString(2, member.getLastName());
-            preparedStatement.executeUpdate();
-
-            Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery("SELECT LAST_INSERT_ID()");
-            resultSet.next();
-            id = resultSet.getInt(1);
-        }
-
-        lock.unlock();
-
-        return id;
+        return idOnCreate;
     }
 
     @Override
     public void delete(int id) {
-        lock.lock();
-
         try {
-            PreparedStatement preparedStatement = connection.prepareStatement(
-                    "DELETE FROM member WHERE id = ?");
-            preparedStatement.setInt(1, id);
-            preparedStatement.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+            lock.lock();
 
-        lock.unlock();
+            try (Connection connection = databaseConnection.getConnection()) {
+                PreparedStatement preparedStatement = connection.prepareStatement(
+                        "DELETE FROM member WHERE id = ?");
+                preparedStatement.setInt(1, id);
+                preparedStatement.executeUpdate();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        } finally {
+            lock.unlock();
+        }
     }
 }

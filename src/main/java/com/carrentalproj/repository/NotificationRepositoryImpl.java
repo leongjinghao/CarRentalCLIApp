@@ -1,7 +1,8 @@
 package com.carrentalproj.repository;
 
 import com.carrentalproj.databaseconnection.DatabaseConnection;
-import com.carrentalproj.entity.vehicleType.Vehicle;
+import com.carrentalproj.entity.Member;
+import com.carrentalproj.entity.Notification;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -10,24 +11,24 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class VehicleRepositoryImpl implements VehicleRepository {
+public class NotificationRepositoryImpl implements NotificationRepository {
 
     private final DatabaseConnection databaseConnection;
 
     private static final Lock lock = new ReentrantLock();
 
-    private static VehicleRepository instance;
+    private static NotificationRepository instance;
 
-    private VehicleRepositoryImpl() {
+    private NotificationRepositoryImpl() {
         databaseConnection = DatabaseConnection.getInstance();
     }
 
-    public static VehicleRepository getInstance() {
+    public static NotificationRepository getInstance() {
         try {
             lock.lock();
 
             if (instance == null) {
-                instance = new VehicleRepositoryImpl();
+                instance = new NotificationRepositoryImpl();
             }
         } finally {
             lock.unlock();
@@ -37,59 +38,59 @@ public class VehicleRepositoryImpl implements VehicleRepository {
     }
 
     @Override
-    public Vehicle findById(int id) {
-        Vehicle vehicleType = null;
+    public Notification findById(int id) {
+        Notification notification = null;
 
         try (Connection connection = databaseConnection.getConnection()) {
             PreparedStatement preparedStatement = connection.prepareStatement(
-                    "SELECT * FROM vehicle WHERE id = ?");
+                    "SELECT * FROM notification WHERE id = ?");
             preparedStatement.setInt(1, id);
             ResultSet resultSet = preparedStatement.executeQuery();
 
             if (resultSet.next()) {
-                vehicleType = new Vehicle(
+                notification = new Notification(
                         resultSet.getInt(1),
-                        resultSet.getString(2),
-                        resultSet.getString(3),
-                        resultSet.getString(4)
+                        MemberRepositoryImpl.getInstance().findById(
+                                resultSet.getInt(2)),
+                        resultSet.getString(3)
                 );
             } else {
-                throw new NoSuchElementException("No vehicle type with ID=" + id + " found");
+                throw new NoSuchElementException("No notification with ID=" + id + " found");
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
-        return vehicleType;
+        return notification;
     }
 
     @Override
-    public List<Vehicle> findAll() {
-        List<Vehicle> vehicles = new ArrayList<>();
+    public List<Notification> findAll() {
+        List<Notification> notifications = new ArrayList<>();
 
         try (Connection connection = databaseConnection.getConnection()) {
             Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery("SELECT * FROM vehicle");
+            ResultSet resultSet = statement.executeQuery("SELECT * FROM notification");
 
             while (resultSet.next()) {
-                Vehicle vehicleType = new Vehicle(
+                Notification notification = new Notification(
                         resultSet.getInt(1),
-                        resultSet.getString(2),
-                        resultSet.getString(3),
-                        resultSet.getString(4)
+                        MemberRepositoryImpl.getInstance().findById(
+                                resultSet.getInt(2)),
+                        resultSet.getString(3)
                 );
 
-                vehicles.add(vehicleType);
+                notifications.add(notification);
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
-        return vehicles;
+        return notifications;
     }
 
     @Override
-    public int save(Vehicle vehicle) throws SQLException {
+    public int save(Notification notification) throws SQLException {
         int idOnCreate = 0;
 
         try {
@@ -100,27 +101,26 @@ public class VehicleRepositoryImpl implements VehicleRepository {
 
                 // Update
                 try {
-                    findById(vehicle.getId());
+                    findById(notification.getId());
 
                     preparedStatement = connection.prepareStatement("""
-                            UPDATE vehicle
-                            SET brand = ?, model = ?, colour = ?
+                            UPDATE notification
+                            SET memberId = ?, message = ?
                             WHERE id = %d
-                            """.formatted(vehicle.getId()));
+                            """.formatted(notification.getId()));
                 }
                 // Create
                 catch (NoSuchElementException e) {
                     preparedStatement = connection.prepareStatement("""
-                            INSERT INTO vehicle(brand, model, colour)
+                            INSERT INTO notification(memberId, message)
                             VALUES
-                            (?, ?, ?)
+                            (?, ?)
                             """);
                 }
 
                 if (preparedStatement != null) {
-                    preparedStatement.setString(1, vehicle.getBrand());
-                    preparedStatement.setString(2, vehicle.getModel());
-                    preparedStatement.setString(3, vehicle.getColour());
+                    preparedStatement.setInt(1, notification.getMember().getId());
+                    preparedStatement.setString(2, notification.getMessage());
                     preparedStatement.executeUpdate();
 
                     Statement statement = connection.createStatement();
@@ -140,17 +140,19 @@ public class VehicleRepositoryImpl implements VehicleRepository {
 
     @Override
     public void delete(int id) {
-        lock.lock();
+        try {
+            lock.lock();
 
-        try (Connection connection = databaseConnection.getConnection()) {
-            PreparedStatement preparedStatement = connection.prepareStatement(
-                    "DELETE FROM vehicle WHERE id = ?");
-            preparedStatement.setInt(1, id);
-            preparedStatement.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
+            try (Connection connection = databaseConnection.getConnection()) {
+                PreparedStatement preparedStatement = connection.prepareStatement(
+                        "DELETE FROM notification WHERE id = ?");
+                preparedStatement.setInt(1, id);
+                preparedStatement.executeUpdate();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        } finally {
+            lock.unlock();
         }
-
-        lock.unlock();
     }
 }

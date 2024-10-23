@@ -3,23 +3,29 @@ package com.carrentalproj.service;
 import com.carrentalproj.Utility;
 import com.carrentalproj.entity.Inventory;
 import com.carrentalproj.entity.Member;
+import com.carrentalproj.entity.Notification;
 import com.carrentalproj.entity.Rental;
+import com.carrentalproj.exception.IllegalCarRentalOperationArgumentException;
+import com.carrentalproj.repository.NotificationRepository;
+import com.carrentalproj.repository.NotificationRepositoryImpl;
 import com.carrentalproj.repository.RentalRepository;
 import com.carrentalproj.repository.RentalRepositoryImpl;
 
 import java.sql.SQLException;
 import java.time.Duration;
-import java.time.LocalDate;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
+import java.util.Date;
+import java.util.List;
+import java.util.NoSuchElementException;
 
 public class RentalServiceImp implements RentalService {
 
     private final RentalRepository rentalRepository;
+    private final NotificationRepository notificationRepository;
     private static RentalServiceImp instance;
 
     private RentalServiceImp() {
         rentalRepository = RentalRepositoryImpl.getInstance();
+        notificationRepository = NotificationRepositoryImpl.getInstance();
     }
 
     public static synchronized RentalServiceImp getInstance() {
@@ -58,7 +64,7 @@ public class RentalServiceImp implements RentalService {
         // Validation on dueDate
         Date today = Utility.getTodayDate();
         if (dueDate.before(today)) {
-            throw new IllegalArgumentException("Due date cannot be before today's date");
+            throw new IllegalCarRentalOperationArgumentException("Due date cannot be before today's date");
         }
 
         long period = Duration.between(today.toInstant(), dueDate.toInstant()).toDays() + 1L;
@@ -79,24 +85,22 @@ public class RentalServiceImp implements RentalService {
     }
 
     @Override
-    public void updateRentalReturnedStatus(int id, boolean isReturned) {
+    public void returned(int memberId, int rentalId) {
         try {
-            Rental rental = rentalRepository.findById(id);
-            rental.setReturned(isReturned);
-            rentalRepository.save(rental);
+            Rental rental = rentalRepository.findById(rentalId);
+
+            if (rental.getMember().getId() == memberId) {
+                rental.setReturned(true);
+                rentalRepository.save(rental);
+            } else {
+                throw new IllegalCarRentalOperationArgumentException("Rental return failed, member is not the owner of the rental");
+            }
+        } catch (NoSuchElementException e) {
+            throw new IllegalCarRentalOperationArgumentException(e.getMessage());
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
-    @Override
-    public void returned(int id) {
-        try {
-            Rental rental = rentalRepository.findById(id);
-            rental.setReturned(true);
-            rentalRepository.save(rental);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
     }
 }

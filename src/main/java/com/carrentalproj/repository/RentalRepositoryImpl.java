@@ -12,25 +12,27 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class RentalRepositoryImpl implements RentalRepository {
 
-    Connection connection;
+    private final DatabaseConnection databaseConnection;
 
     private static final Lock lock = new ReentrantLock();
 
     private static RentalRepository instance;
 
     private RentalRepositoryImpl() {
-        DatabaseConnection databaseConnection = DatabaseConnection.getInstance();
-        connection = databaseConnection.getConnection();
+        databaseConnection = DatabaseConnection.getInstance();
     }
 
     public static RentalRepository getInstance() {
-        lock.lock();
+        try {
+            lock.lock();
 
-        if (instance == null) {
-            instance = new RentalRepositoryImpl();
+            if (instance == null) {
+                instance = new RentalRepositoryImpl();
+            }
+        } finally {
+            lock.unlock();
         }
 
-        lock.unlock();
         return instance;
     }
 
@@ -38,7 +40,7 @@ public class RentalRepositoryImpl implements RentalRepository {
     public Rental findById(int id) {
         Rental rental = null;
 
-        try {
+        try (Connection connection = databaseConnection.getConnection()) {
             PreparedStatement preparedStatement = connection.prepareStatement(
                     "SELECT * FROM rental WHERE id = ?");
             preparedStatement.setInt(1, id);
@@ -68,7 +70,7 @@ public class RentalRepositoryImpl implements RentalRepository {
     public List<Rental> findAll() {
         List<Rental> rentals = new ArrayList<>();
 
-        try {
+        try (Connection connection = databaseConnection.getConnection()) {
             Statement statement = connection.createStatement();
             ResultSet resultSet = statement.executeQuery("SELECT * FROM rental");
 
@@ -82,6 +84,8 @@ public class RentalRepositoryImpl implements RentalRepository {
                         resultSet.getDate(5),
                         resultSet.getDouble(6)
                 );
+                rental.setLateFee(resultSet.getDouble(7));
+                rental.setReturned(resultSet.getBoolean(8));
 
                 rentals.add(rental);
             }
@@ -94,64 +98,73 @@ public class RentalRepositoryImpl implements RentalRepository {
 
     @Override
     public int save(Rental rental) throws SQLException {
-        lock.lock();
+        int idOnCreate = 0;
 
-        int id = rental.getId();
-        PreparedStatement preparedStatement;
+        try  {
+            lock.lock();
 
-        // Update
-        try {
-            findById(rental.getId());
+            try (Connection connection = databaseConnection.getConnection()) {
+                PreparedStatement preparedStatement;
 
-            preparedStatement = connection.prepareStatement("""
-                    UPDATE rental
-                    SET inventoryId = ?, memberId = ?, startDate = ?, dueDate = ?, rentalFee = ?, lateFee = ?, isReturned = ?
-                    WHERE id = %d
-                    """.formatted(rental.getId()));
+                // Update
+                try {
+                    findById(rental.getId());
+
+                    preparedStatement = connection.prepareStatement("""
+                            UPDATE rental
+                            SET inventoryId = ?, memberId = ?, startDate = ?, dueDate = ?, rentalFee = ?, lateFee = ?, isReturned = ?
+                            WHERE id = %d
+                            """.formatted(rental.getId()));
+                }
+                // Create
+                catch (NoSuchElementException e) {
+                    preparedStatement = connection.prepareStatement("""
+                            INSERT INTO rental(inventoryId, memberId, startDate, dueDate, rentalFee, lateFee, isReturned)
+                            VALUES
+                            (?, ?, ?, ?, ?, ?, ?)
+                            """);
+                }
+
+                if (preparedStatement != null) {
+                    preparedStatement.setInt(1, rental.getInventoryInstance().getId());
+                    preparedStatement.setInt(2, rental.getMember().getId());
+                    preparedStatement.setDate(3, new Date(rental.getStartDate().getTime()));
+                    preparedStatement.setDate(4, new Date(rental.getDueDate().getTime()));
+                    preparedStatement.setDouble(5, rental.getRentalFee());
+                    preparedStatement.setDouble(6, rental.getLateFee());
+                    preparedStatement.setBoolean(7, rental.isReturned());
+                    preparedStatement.executeUpdate();
+
+                    Statement statement = connection.createStatement();
+                    ResultSet resultSet = statement.executeQuery("SELECT LAST_INSERT_ID()");
+                    resultSet.next();
+                    idOnCreate = resultSet.getInt(1);
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        } finally {
+            lock.unlock();
         }
-        // Create
-        catch (NoSuchElementException e) {
-            preparedStatement = connection.prepareStatement("""
-                    INSERT INTO rental(inventoryId, memberId, startDate, dueDate, rentalFee, lateFee, isReturned)
-                    VALUES
-                    (?, ?, ?, ?, ?, ?, ?)
-                    """);
-        }
 
-        if (preparedStatement != null) {
-            preparedStatement.setInt(1, rental.getInventoryInstance().getId());
-            preparedStatement.setInt(2, rental.getMember().getId());
-            preparedStatement.setDate(3, new Date(rental.getStartDate().getTime()));
-            preparedStatement.setDate(4, new Date(rental.getDueDate().getTime()));
-            preparedStatement.setDouble(5, rental.getRentalFee());
-            preparedStatement.setDouble(6, rental.getLateFee());
-            preparedStatement.setBoolean(7, rental.isReturned());
-            preparedStatement.executeUpdate();
-
-            Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery("SELECT LAST_INSERT_ID()");
-            resultSet.next();
-            id = resultSet.getInt(1);
-        }
-
-        lock.unlock();
-
-        return id;
+        return idOnCreate;
     }
 
     @Override
     public void delete(int id) {
-        lock.lock();
-
         try {
-            PreparedStatement preparedStatement = connection.prepareStatement(
-                    "DELETE FROM rental WHERE id = ?");
-            preparedStatement.setInt(1, id);
-            preparedStatement.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+            lock.lock();
 
-        lock.unlock();
+            try (Connection connection = databaseConnection.getConnection()) {
+                PreparedStatement preparedStatement = connection.prepareStatement(
+                        "DELETE FROM rental WHERE id = ?");
+                preparedStatement.setInt(1, id);
+                preparedStatement.executeUpdate();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        } finally {
+            lock.unlock();
+        }
     }
 }

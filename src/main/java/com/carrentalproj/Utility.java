@@ -5,6 +5,7 @@ import com.carrentalproj.entity.Member;
 import com.carrentalproj.entity.vehicleType.Car;
 import com.carrentalproj.entity.vehicleType.Van;
 import com.carrentalproj.entity.vehicleType.Vehicle;
+import com.carrentalproj.exception.IllegalCarRentalOperationArgumentException;
 import com.carrentalproj.service.*;
 
 import java.util.Calendar;
@@ -45,7 +46,7 @@ public class Utility {
             case 10 -> Calendar.OCTOBER;
             case 11 -> Calendar.NOVEMBER;
             case 12 -> Calendar.DECEMBER;
-            default -> throw new IllegalArgumentException("Invalid month: " + month);
+            default -> throw new IllegalCarRentalOperationArgumentException("Invalid month: " + month);
         };
     }
 

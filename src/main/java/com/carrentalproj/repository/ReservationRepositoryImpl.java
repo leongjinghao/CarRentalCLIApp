@@ -12,25 +12,26 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class ReservationRepositoryImpl implements ReservationRepository {
 
-    Connection connection;
+    private final DatabaseConnection databaseConnection;
 
     private static final Lock lock = new ReentrantLock();
 
     private static ReservationRepository instance;
 
     private ReservationRepositoryImpl() {
-        DatabaseConnection databaseConnection = DatabaseConnection.getInstance();
-        connection = databaseConnection.getConnection();
+        databaseConnection = DatabaseConnection.getInstance();
     }
 
     public static ReservationRepository getInstance() {
-        lock.lock();
+        try {
+            lock.lock();
 
-        if (instance == null) {
-            instance = new ReservationRepositoryImpl();
+            if (instance == null) {
+                instance = new ReservationRepositoryImpl();
+            }
+        } finally {
+            lock.unlock();
         }
-
-        lock.unlock();
 
         return instance;
     }
@@ -39,7 +40,7 @@ public class ReservationRepositoryImpl implements ReservationRepository {
     public Reservation findById(int id) {
         Reservation reservation = null;
 
-        try {
+        try (Connection connection = databaseConnection.getConnection()) {
             PreparedStatement preparedStatement = connection.prepareStatement(
                     "SELECT * FROM reservation WHERE id = ?");
             preparedStatement.setInt(1, id);
@@ -52,8 +53,8 @@ public class ReservationRepositoryImpl implements ReservationRepository {
                                 resultSet.getInt(2)),
                         MemberRepositoryImpl.getInstance().findById(
                                 resultSet.getInt(3)),
-                        resultSet.getDate(5),
-                        resultSet.getDate(6)
+                        resultSet.getDate(4),
+                        resultSet.getDate(5)
                 );
             } else {
                 throw new NoSuchElementException("No reservation record with ID=" + id + " found");
@@ -69,7 +70,7 @@ public class ReservationRepositoryImpl implements ReservationRepository {
     public List<Reservation> findAll() {
         List<Reservation> reservations = new ArrayList<>();
 
-        try {
+        try (Connection connection = databaseConnection.getConnection()) {
             Statement statement = connection.createStatement();
             ResultSet resultSet = statement.executeQuery("SELECT * FROM reservation");
 
@@ -95,61 +96,70 @@ public class ReservationRepositoryImpl implements ReservationRepository {
 
     @Override
     public int save(Reservation reservation) throws SQLException {
-        lock.lock();
+        int idOnCreate = 0;
 
-        int id = reservation.getId();
-        PreparedStatement preparedStatement;
-
-        // Update
         try {
-            findById(reservation.getId());
+            lock.lock();
 
-            preparedStatement = connection.prepareStatement("""
-                    UPDATE reservation
-                    SET inventoryId = ?, memberId = ?, startDate = ?, endDate = ?
-                    WHERE id = %d
-                    """.formatted(reservation.getId()));
+            try (Connection connection = databaseConnection.getConnection()) {
+                PreparedStatement preparedStatement;
+
+                // Update
+                try {
+                    findById(reservation.getId());
+
+                    preparedStatement = connection.prepareStatement("""
+                            UPDATE reservation
+                            SET inventoryId = ?, memberId = ?, startDate = ?, endDate = ?
+                            WHERE id = %d
+                            """.formatted(reservation.getId()));
+                }
+                // Create
+                catch (NoSuchElementException e) {
+                    preparedStatement = connection.prepareStatement("""
+                            INSERT INTO reservation(inventoryId, memberId, startDate, endDate)
+                            VALUES
+                            (?, ?, ?, ?)
+                            """);
+                }
+
+                if (preparedStatement != null) {
+                    preparedStatement.setInt(1, reservation.getInventoryInstance().getId());
+                    preparedStatement.setInt(2, reservation.getMember().getId());
+                    preparedStatement.setDate(3, new Date(reservation.getStartDate().getTime()));
+                    preparedStatement.setDate(4, new Date(reservation.getEndDate().getTime()));
+                    preparedStatement.executeUpdate();
+
+                    Statement statement = connection.createStatement();
+                    ResultSet resultSet = statement.executeQuery("SELECT LAST_INSERT_ID()");
+                    resultSet.next();
+                    idOnCreate = resultSet.getInt(1);
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        } finally {
+            lock.unlock();
         }
-        // Create
-        catch (NoSuchElementException e) {
-            preparedStatement = connection.prepareStatement("""
-                    INSERT INTO reservation(inventoryId, memberId, startDate, endDate)
-                    VALUES
-                    (?, ?, ?, ?)
-                    """);
-        }
 
-        if (preparedStatement != null) {
-            preparedStatement.setInt(1, reservation.getInventoryInstance().getId());
-            preparedStatement.setInt(2, reservation.getMember().getId());
-            preparedStatement.setDate(3, new Date(reservation.getStartDate().getTime()));
-            preparedStatement.setDate(4, new Date(reservation.getEndDate().getTime()));
-            preparedStatement.executeUpdate();
-
-            Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery("SELECT LAST_INSERT_ID()");
-            resultSet.next();
-            id = resultSet.getInt(1);
-        }
-
-        lock.unlock();
-
-        return id;
+        return idOnCreate;
     }
 
     @Override
     public void delete(int id) {
-        lock.lock();
-
         try {
-            PreparedStatement preparedStatement = connection.prepareStatement(
-                    "DELETE FROM reservation WHERE id = ?");
-            preparedStatement.setInt(1, id);
-            preparedStatement.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+            lock.lock();
 
-        lock.unlock();
+            try (Connection connection = databaseConnection.getConnection()) {
+                PreparedStatement preparedStatement = connection.prepareStatement(
+                        "DELETE FROM reservation WHERE id = ?");
+                preparedStatement.setInt(1, id);
+                preparedStatement.executeUpdate();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        } finally {
+            lock.unlock();
+        }
     }
 }

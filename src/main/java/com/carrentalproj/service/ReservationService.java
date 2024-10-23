@@ -14,5 +14,5 @@ public interface ReservationService {
     List<Reservation> getReservationsByMemberId(int memberId);
     Reservation getReservationById(int id);
     int reserve(Inventory inventoryInstance, Member member, Date startDate, Date endDate);
-    void cancelReservation(int id);
+    void cancelReservation(int memberId, int reservationId);
 }

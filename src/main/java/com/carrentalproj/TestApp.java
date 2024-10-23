@@ -35,7 +35,7 @@ public class TestApp {
         int johnResId1 = rentalReservationOrchestrator.reserve(teslaModel3Instance2, john, new Date(2024, Calendar.OCTOBER, 21), new Date(2024, Calendar.OCTOBER, 25));
         int johnRentId2 = rentalReservationOrchestrator.rent(toyotaHiaceInstance1, john, new Date(2024, Calendar.NOVEMBER, 10));
 
-        rentalReservationOrchestrator.cancelReservation(johnResId1);
+        rentalReservationOrchestrator.cancelReservation(john.getId(), johnResId1);
 
         // Anna's transactions
         Member anna = memberService.getMember(ids.get("annaMemberId"));
@@ -44,10 +44,10 @@ public class TestApp {
         Inventory teslaModel3Instance1 = inventoryService.getFromInventory(ids.get("teslaModel3InventoryInstance1Id"));
         int annaRentId1 = rentalReservationOrchestrator.rent(teslaModel3Instance1, anna, new Date(2024, Calendar.OCTOBER, 21));
 
-        rentalReservationOrchestrator.cancelReservation(annaResId1);
+        rentalReservationOrchestrator.cancelReservation(anna.getId(), annaResId1);
         int annaResId2 = rentalReservationOrchestrator.reserve(teslaModel3Instance2, anna, new Date(2024, Calendar.OCTOBER, 22), new Date(2024, Calendar.OCTOBER, 30));
 
-        rentalReservationOrchestrator.returned(johnRentId2);
+        rentalReservationOrchestrator.returned(john.getId(), johnRentId2);
         int annaResId3 = rentalReservationOrchestrator.reserve(toyotaHiaceInstance1, anna, new Date(2024, Calendar.OCTOBER, 22), new Date(2024, Calendar.OCTOBER, 30));
     }
 }
