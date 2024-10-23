@@ -2,6 +2,8 @@ package com.carrentalproj.client.state;
 
 import com.carrentalproj.Utility;
 import com.carrentalproj.client.ClientContext;
+import com.carrentalproj.entity.Inventory;
+import com.carrentalproj.entity.Member;
 import com.carrentalproj.entity.Rental;
 import com.carrentalproj.entity.Reservation;
 import com.carrentalproj.service.RentalReservationOrchestrator;
@@ -23,9 +25,7 @@ public class ViewMembersByInventoryInstance implements ClientState {
     @Override
     public void handleRequest() {
 
-        Scanner sc = new Scanner(System.in);
         RentalReservationOrchestrator rentalReservationOrchestrator = RentalReservationOrchestrator.getInstance();
-
 
         if (clientContext.getVehicleTypeSelected() == null || clientContext.getInventoryInstanceSelected() == null) {
             System.out.println("Viewing Member(s) Who Rented or Reserved a Inventory Instance...");
@@ -35,34 +35,40 @@ public class ViewMembersByInventoryInstance implements ClientState {
             List<Rental> rentalsWithInventoryInstance = rentalReservationOrchestrator.getRentalsByInventoryInstanceId(inventoryInstanceSelectedId);
             List<Reservation> reservationsWithInventoryInstance = rentalReservationOrchestrator.getReservationsByInventoryInstanceId(inventoryInstanceSelectedId);
 
-            if (!rentalsWithInventoryInstance.isEmpty()) {
-                System.out.println("\nList of member(s) currently rented " + clientContext.getInventoryInstanceSelected() + ":");
+            HashSet<Member> rentalsWithInventoryInstanceFilteredCurrent = new HashSet<>(rentalsWithInventoryInstance.stream()
+                    .filter(rental -> !rental.isReturned())
+                    .map(rental -> rental.getMember())
+                    .collect(Collectors.toMap(
+                            member -> member.getId(),
+                            member -> member,
+                            (existing, replacement) -> existing
+                    ))
+                    .values());
 
-                new HashSet<>(rentalsWithInventoryInstance.stream()
-                        .filter(rental -> !rental.isReturned())
-                        .map(rental -> rental.getMember())
-                        .collect(Collectors.toMap(
-                                member -> member.getId(),
-                                member -> member,
-                                (existing, replacement) -> existing
-                        ))
-                        .values())
-                        .forEach(member -> System.out.println(member));
-            }
+            HashSet<Member> reservationsWithInventoryInstanceFilteredCurrent = new HashSet<>(reservationsWithInventoryInstance.stream()
+                    .filter(reservation -> reservation.getEndDate().after(Utility.getTodayDate()))
+                    .map(reservation -> reservation.getMember())
+                    .collect(Collectors.toMap(
+                            member -> member.getId(),
+                            member -> member,
+                            (existing, replacement) -> existing
+                    ))
+                    .values());
 
-            if (!reservationsWithInventoryInstance.isEmpty()) {
-                System.out.println("\nList of member(s) currently reserved " + clientContext.getInventoryInstanceSelected() + ":");
+            if (rentalsWithInventoryInstanceFilteredCurrent.isEmpty() && reservationsWithInventoryInstanceFilteredCurrent.isEmpty()) {
+                System.out.println("\nNo result found...");
+            } else {
+                if (!rentalsWithInventoryInstanceFilteredCurrent.isEmpty()) {
+                    System.out.println("\nList of member(s) currently rented " + clientContext.getInventoryInstanceSelected() + ":");
+                    rentalsWithInventoryInstanceFilteredCurrent.forEach(
+                            member -> System.out.println(member));
+                }
 
-                new HashSet<>(reservationsWithInventoryInstance.stream()
-                        .filter(reservation -> reservation.getEndDate().after(Utility.getTodayDate()))
-                        .map(reservation -> reservation.getMember())
-                        .collect(Collectors.toMap(
-                                member -> member.getId(),
-                                member -> member,
-                                (existing, replacement) -> existing
-                        ))
-                        .values())
-                        .forEach(member -> System.out.println(member));
+                if (!reservationsWithInventoryInstanceFilteredCurrent.isEmpty()) {
+                    System.out.println("\nList of member(s) currently reserved " + clientContext.getInventoryInstanceSelected() + ":");
+                    reservationsWithInventoryInstanceFilteredCurrent.forEach(
+                            member -> System.out.println(member));
+                }
             }
 
             clientContext.clearOperationContext();
