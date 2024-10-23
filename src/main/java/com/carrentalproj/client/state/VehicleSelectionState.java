@@ -23,7 +23,7 @@ public class VehicleSelectionState implements ClientState {
         VehicleService vehicleService = clientContext.getVehicleService();
         List<Vehicle> vehicleTypes = vehicleService.getAllVehicleTypes();
 
-        System.out.println("Select a vehicle type to rent:");
+        System.out.println("Select a vehicle type:");
         AtomicInteger option = new AtomicInteger(1);
         vehicleTypes.forEach(vehicle -> System.out.println(option.getAndIncrement() + ". " + vehicle.getBrand() + ": " + vehicle.getModel() + " (" + vehicle.getColour() + ")"));
         int optionSelected = sc.nextInt();

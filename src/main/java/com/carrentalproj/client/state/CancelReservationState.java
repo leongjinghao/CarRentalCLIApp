@@ -2,6 +2,7 @@ package com.carrentalproj.client.state;
 
 import com.carrentalproj.client.ClientContext;
 import com.carrentalproj.entity.Reservation;
+import com.carrentalproj.exception.IllegalCarRentalOperationArgumentException;
 import com.carrentalproj.service.ReservationService;
 
 import java.util.Scanner;
@@ -24,10 +25,14 @@ public class CancelReservationState implements ClientState {
         System.out.println("Please enter the reservation ID to cancel:");
         int reservationId = sc.nextInt();
 
-        Reservation reservation = reservationService.getReservationById(reservationId);
-        reservationService.cancelReservation(reservationId);
-        System.out.println("Reservation: " + reservation + " canceled successfully");
+        try {
+            Reservation reservation = reservationService.getReservationById(reservationId);
+            reservationService.cancelReservation(clientContext.getCurrentMember().getId(), reservationId);
+            System.out.println("Reservation: " + reservation + " canceled successfully");
+        } catch (IllegalCarRentalOperationArgumentException e) {
+            System.out.println(e.getMessage());
+        }
 
-        clientContext.setClientState(new StartState(clientContext));
+        clientContext.setClientState(new PendingContinueState(clientContext));
     }
 }

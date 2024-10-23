@@ -2,6 +2,7 @@ package com.carrentalproj.client.state;
 
 import com.carrentalproj.client.ClientContext;
 import com.carrentalproj.entity.Rental;
+import com.carrentalproj.exception.IllegalCarRentalOperationArgumentException;
 import com.carrentalproj.service.RentalService;
 
 import java.util.Scanner;
@@ -24,10 +25,14 @@ public class ReturnedVehicleState implements ClientState {
         System.out.println("Please enter the rental ID to return:");
         int rentalId = sc.nextInt();
 
-        Rental rental = rentalService.getRentalsById(rentalId);
-        rentalService.returned(rentalId);
-        System.out.println("Rental: " + rental + " returned successfully");
+        try {
+            Rental rental = rentalService.getRentalsById(rentalId);
+            rentalService.returned(clientContext.getCurrentMember().getId(), rentalId);
+            System.out.println("Rental: " + rental + " returned successfully");
+        } catch (IllegalCarRentalOperationArgumentException e) {
+            System.out.println(e.getMessage());
+        }
 
-        clientContext.setClientState(new StartState(clientContext));
+        clientContext.setClientState(new PendingContinueState(clientContext));
     }
 }

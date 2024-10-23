@@ -23,8 +23,8 @@ public class ChoosingOperationState implements ClientState {
                 2. Reserve a Vehicle
                 3. Return a Vehicle
                 4. Cancel a Reservation
-                5. List Vehicles by Member
-                6. List Members by Vehicle
+                5. List the Vehicle(s) Rented or Reserved by the Selected Member
+                6. List the Member(s) Who Currently Rented or Reserved the Selected Vehicle
                 7. Exit
                 Enter the number corresponding to your choice:""");
 
@@ -35,12 +35,8 @@ public class ChoosingOperationState implements ClientState {
             case 2 -> clientContext.setClientState(new ReservationState(this.clientContext));
             case 3 -> clientContext.setClientState(new ReturnedVehicleState(this.clientContext));
             case 4 -> clientContext.setClientState(new CancelReservationState(this.clientContext));
-            // case 5:
-            //     break;
-            // case 6:
-            //     break;
-            // case 7:
-            //     break;
+            case 5 -> clientContext.setClientState(new ViewInventoryInstancesByMemberState(this.clientContext));
+            case 6 -> clientContext.setClientState(new ViewMembersByInventoryInstance(this.clientContext));
             case 7 -> clientContext.setClientState(null);
             default -> {
                 System.out.println("Invalid input... Please try again...");

@@ -27,6 +27,6 @@ public class SetMemberState implements ClientState {
         System.out.println("\nWelcome, " + currentMember.getFirstName() + "!");
 
         clientContext.setCurrentMember(currentMember);
-        clientContext.setClientState(new StartState(clientContext));
+        clientContext.setClientState(new PendingContinueState(clientContext));
     }
 }

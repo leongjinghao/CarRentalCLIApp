@@ -2,6 +2,7 @@ package com.carrentalproj.client.state;
 
 import com.carrentalproj.Utility;
 import com.carrentalproj.client.ClientContext;
+import com.carrentalproj.exception.IllegalCarRentalOperationArgumentException;
 import com.carrentalproj.service.ReservationService;
 
 import java.util.Date;
@@ -56,8 +57,9 @@ public class ReservationState implements ClientState {
                 );
                 System.out.println("Reservation successful, reservation ID: " + reservationId);
 
-                clearOperationContext();
-            } catch (RuntimeException e) {
+                clientContext.clearOperationContext();
+                clientContext.setClientState(new PendingContinueState(clientContext));
+            } catch (IllegalCarRentalOperationArgumentException e) {
                 System.out.println(e.getMessage());
 
                 System.out.println("Retry with another date? (yes/no):");
@@ -66,16 +68,10 @@ public class ReservationState implements ClientState {
                 if (retry.equals("yes")) {
                     clientContext.setClientState(new ReservationState(clientContext));
                 } else {
-                    clearOperationContext();
+                    clientContext.clearOperationContext();
+                    clientContext.setClientState(new StartState(clientContext));
                 }
             }
         }
-    }
-
-    private void clearOperationContext() {
-        clientContext.setVehicleTypeSelected(null);
-        clientContext.setInventoryInstanceSelected(null);
-        clientContext.setBusinessOperation("");
-        clientContext.setClientState(new StartState(clientContext));
     }
 }

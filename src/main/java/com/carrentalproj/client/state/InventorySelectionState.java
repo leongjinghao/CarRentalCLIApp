@@ -2,6 +2,7 @@ package com.carrentalproj.client.state;
 
 import com.carrentalproj.client.ClientContext;
 import com.carrentalproj.entity.Inventory;
+import com.carrentalproj.exception.IllegalClientStateException;
 import com.carrentalproj.service.InventoryService;
 
 import java.util.List;
@@ -24,7 +25,7 @@ public class InventorySelectionState implements ClientState {
         List<Inventory> inventoryInstances = inventoryService.getAllFromInventoryByVehicleTypeId(
                 clientContext.getVehicleTypeSelected().getId());
 
-        System.out.println("Select the inventory instance to rent:");
+        System.out.println("Select a inventory instance:");
         AtomicInteger option = new AtomicInteger(1);
         inventoryInstances.forEach(inventoryInstance -> System.out.println(option.getAndIncrement() + ". " +
                 "Parking Stall No.:" + inventoryInstance.getParkingStallNum() +
@@ -35,10 +36,13 @@ public class InventorySelectionState implements ClientState {
         int optionSelected = sc.nextInt();
         clientContext.setInventoryInstanceSelected(inventoryInstances.get(optionSelected - 1));
 
-        if (clientContext.getBusinessOperation().equals("rental")) {
-            clientContext.setClientState(new RentalState(clientContext));
-        } else if (clientContext.getBusinessOperation().equals("reservation")) {
-            clientContext.setClientState(new ReservationState(clientContext));
+        switch (clientContext.getBusinessOperation()) {
+            case "rental" -> clientContext.setClientState(new RentalState(clientContext));
+            case "reservation" -> clientContext.setClientState(new ReservationState(clientContext));
+            case "ViewMembersByInventoryInstance" ->
+                    clientContext.setClientState(new ViewMembersByInventoryInstance(clientContext));
+            default ->
+                    throw new IllegalClientStateException("Illegal client state: Unexpected current business operation (" + clientContext.getBusinessOperation() + ")");
         }
     }
 }

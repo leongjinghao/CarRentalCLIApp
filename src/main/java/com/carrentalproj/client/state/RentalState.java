@@ -2,6 +2,7 @@ package com.carrentalproj.client.state;
 
 import com.carrentalproj.Utility;
 import com.carrentalproj.client.ClientContext;
+import com.carrentalproj.exception.IllegalCarRentalOperationArgumentException;
 import com.carrentalproj.service.RentalService;
 
 import java.util.Date;
@@ -42,18 +43,12 @@ public class RentalState implements ClientState {
                         dueDate
                 );
                 System.out.println("Rental successful, rental ID: " + rentalId);
-            } catch (RuntimeException e) {
+            } catch (IllegalCarRentalOperationArgumentException e) {
                 System.out.println(e.getMessage());
             }
 
-            clearOperationContext();
+            clientContext.clearOperationContext();
+            clientContext.setClientState(new PendingContinueState(clientContext));
         }
-    }
-
-    private void clearOperationContext() {
-        clientContext.setVehicleTypeSelected(null);
-        clientContext.setInventoryInstanceSelected(null);
-        clientContext.setBusinessOperation("");
-        clientContext.setClientState(new StartState(clientContext));
     }
 }

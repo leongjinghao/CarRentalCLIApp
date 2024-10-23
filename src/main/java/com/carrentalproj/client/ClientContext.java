@@ -36,6 +36,12 @@ public class ClientContext {
         }
     }
 
+    public void clearOperationContext() {
+        vehicleTypeSelected = null;
+        inventoryInstanceSelected = null;
+        businessOperation = "";
+    }
+
     public ClientState getClientState() {
         return clientState;
     }
