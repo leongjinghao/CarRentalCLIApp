@@ -25,19 +25,21 @@ public class ChoosingOperationState implements ClientState {
                 4. Cancel a Reservation
                 5. List the Vehicle(s) Rented or Reserved by the Selected Member
                 6. List the Member(s) Who Currently Rented or Reserved the Selected Vehicle
-                7. Exit
+                7. Change Current Member
+                8. Exit
                 Enter the number corresponding to your choice:""");
 
         int operationSelected = sc.nextInt();
 
         switch (operationSelected) {
-            case 1 -> clientContext.setClientState(new RentalState(this.clientContext));
-            case 2 -> clientContext.setClientState(new ReservationState(this.clientContext));
-            case 3 -> clientContext.setClientState(new ReturnedVehicleState(this.clientContext));
-            case 4 -> clientContext.setClientState(new CancelReservationState(this.clientContext));
-            case 5 -> clientContext.setClientState(new ViewInventoryInstancesByMemberState(this.clientContext));
-            case 6 -> clientContext.setClientState(new ViewMembersByInventoryInstance(this.clientContext));
-            case 7 -> clientContext.setClientState(null);
+            case 1 -> clientContext.setClientState(new RentalState(clientContext));
+            case 2 -> clientContext.setClientState(new ReservationState(clientContext));
+            case 3 -> clientContext.setClientState(new ReturnedVehicleState(clientContext));
+            case 4 -> clientContext.setClientState(new CancelReservationState(clientContext));
+            case 5 -> clientContext.setClientState(new ViewInventoryInstancesByMemberState(clientContext));
+            case 6 -> clientContext.setClientState(new ViewMembersByInventoryInstance(clientContext));
+            case 7 -> clientContext.setClientState(new SetMemberState(clientContext));
+            case 8 -> clientContext.setClientState(null);
             default -> {
                 System.out.println("Invalid input... Please try again...");
                 clientContext.setClientState(this);

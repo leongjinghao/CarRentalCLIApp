@@ -31,7 +31,7 @@ public class InventorySelectionState implements ClientState {
                 "Parking Stall No.:" + inventoryInstance.getParkingStallNum() +
                 ", Barcode: " + inventoryInstance.getBarcode() +
                 ", Rate of rental: " + inventoryInstance.getRateOfRental() +
-                "(" + inventoryInstance.getStatus() + ")"));
+                " (" + inventoryInstance.getStatus() + ")"));
 
         int optionSelected = sc.nextInt();
 
