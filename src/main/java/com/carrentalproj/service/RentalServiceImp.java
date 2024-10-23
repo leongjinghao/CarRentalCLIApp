@@ -102,5 +102,28 @@ public class RentalServiceImp implements RentalService {
         }
     }
 
+    public void chargeLatePendingReturn() {
+        double lateFeeRatio = 1.5;
+
+        rentalRepository.findAll().stream()
+                .filter(rental -> !rental.isReturned())
+                .filter(rental -> rental.getDueDate().before(Utility.getTodayDate()))
+                .forEach(rental -> {
+                    double additionalLateFee = rental.getInventoryInstance().getRateOfRental() * lateFeeRatio;
+                    rental.setLateFee(rental.getLateFee() + additionalLateFee);
+
+                    Notification notification = new Notification(
+                            0,
+                            rental.getMember(),
+                            "Late fee incurred: $" + additionalLateFee +
+                                    ". Current late fee accumulated on rental (ID=" + rental.getId() + ") is $" + rental.getLateFee() +
+                                    ", please return the vehicle to prevent further late fee charges...");
+                    try {
+                        rentalRepository.save(rental);
+                        notificationRepository.save(notification);
+                    } catch (SQLException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
     }
 }
